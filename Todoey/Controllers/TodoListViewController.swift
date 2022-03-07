@@ -8,7 +8,7 @@
 
 import UIKit
 import RealmSwift
-
+import SwipeCellKit
 
 class TodoListViewController: UITableViewController{
 
@@ -16,7 +16,7 @@ class TodoListViewController: UITableViewController{
     let realm = try! Realm()
     var selectCategory : Category? {
         didSet{
-//            loadItems()
+            loadItems()
         }
     }
 
@@ -77,25 +77,18 @@ class TodoListViewController: UITableViewController{
         // did select row
 //        print(itemarray[indexPath.row])
         
-//        contex.delete(itemarray[indexPath.row])
-//        itemarray.remove(at: indexPath.row)
-       
-//        itemarray[indexPath.row].done = !itemarray[indexPath.row].done
-//         saveItem()
-        
-//        if itemarray[indexPath.row].done == false {
-//            itemarray[indexPath.row].done = true
-//        }else{
-//            itemarray[indexPath.row].done = false
-//        }
-        
-//        if  tableView.cellForRow(at: indexPath)?.accessoryType != .checkmark{
-//
-//            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-//        }else{
-//            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-//
-//        }
+        if let item = todoItems?[indexPath.row]{
+        do{
+            
+                try realm.write{
+//                    realm.delete(item)
+                    item.done = !item.done
+                }
+            }catch {
+                print("This contains a error at \(error)")
+            }
+        }
+
         tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -111,14 +104,15 @@ class TodoListViewController: UITableViewController{
                     try self.realm.write{
                         let newItem = Item()
                         newItem.title = textField.text!
-                        currentCategory.item.append(newItem)
+                        newItem.dateSelected = Date()
+                        currentCategory.items.append(newItem)
                     }
                 } catch{
                     print("This has a error at error \(error)")
                 }
             }
 //
-//            self.tableView.reloadData()
+            self.tableView.reloadData()
         }
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create a new Item"
@@ -139,7 +133,7 @@ class TodoListViewController: UITableViewController{
 //    }
     
     func loadItems(){
-       todoItems = selectCategory?.item.sorted(byKeyPath: "title", ascending: true)
+       todoItems = selectCategory?.items.sorted(byKeyPath: "title", ascending: true)
         tableView.reloadData()
         
     }
@@ -150,30 +144,32 @@ class TodoListViewController: UITableViewController{
 
 
 
-//extension TodoListViewController : UISearchBarDelegate {
-//    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-//        let request : NSFetchRequest<Item> = Item.fetchRequest()
-//
-//      let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-//
-//        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-//
-//        loadItems(with: request , predicate:  predicate )
-//
-//    }
-//
-//    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-//        if searchBar.text?.count == 0 {
-//            loadItems()
-//            DispatchQueue.main.async {
-//                searchBar.resignFirstResponder()
-//            }
-//
-//        }
-//    }
-//}
+extension TodoListViewController : UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        todoItems = todoItems?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateSelected", ascending: true)
+
+        tableView.reloadData()
+    }
+
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+
+        }
+    }
+}
 
 
+//let request : NSFetchRequest<Item> = Item.fetchRequest()
+//
+//let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+//
+//request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+//
+//loadItems(with: request , predicate:  predicate )
 
 
 //let alert = UIAlertController(title: "Add new Todoby Item", message: "", preferredStyle: .alert)
@@ -200,3 +196,17 @@ class TodoListViewController: UITableViewController{
 //            }catch{
 //                print("Error")
 //            }
+
+//        if itemarray[indexPath.row].done == false {
+//            itemarray[indexPath.row].done = true
+//        }else{
+//            itemarray[indexPath.row].done = false
+//        }
+        
+//        if  tableView.cellForRow(at: indexPath)?.accessoryType != .checkmark{
+//
+//            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
+//        }else{
+//            tableView.cellForRow(at: indexPath)?.accessoryType = .none
+//
+//        }
