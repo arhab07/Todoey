@@ -9,14 +9,16 @@
 import UIKit
 import RealmSwift
 import SwipeCellKit
+import ChameleonFramework
+class TodoListViewController: SwipeTableViewController{
 
-class TodoListViewController: UITableViewController{
-
+    @IBOutlet weak var searchBar: UISearchBar!
     var todoItems : Results<Item>?
     let realm = try! Realm()
     var selectCategory : Category? {
         didSet{
             loadItems()
+            tableView.rowHeight = 80.0
         }
     }
 
@@ -25,36 +27,77 @@ class TodoListViewController: UITableViewController{
     override func viewDidLoad() {
         super.viewDidLoad()
         loadItems()
-//      print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist"))
         
-        // Do any additional setup after loading the view.
-//        let newItem1 = Item()
-//        newItem1.title = "Find Milk"
-//        itemarray.append(newItem1)
-//
-//        let newItem2 = Item()
-//        newItem2.title = "Find Milk"
-//        itemarray.append(newItem2)
-//
-//        let newItem3 = Item()
-//        newItem3.title = "Find Pen"
-//        itemarray.append(newItem3)
-//        let request : NSFetchRequest<Item> = Item.fetchRequest()
-//        loadItems( )
         
-//        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-//            itemarray = items
+      
+        
+
         
     }
+    
+    override func viewWillAppear(_ animated: Bool) {
+//        if let colorhex = selectCategory?.colour{
+//            guard let navbar = navigationController?.navigationBar else {fatalError("It does not exits")}
+//        navbar.barTintColor = UIColor(hexString: colorhex)
+//        }
+        
+        if let colourHex = selectCategory?.colour {
+                    /*
+                     First we set the title to match the category. We know that it exist since we are inside our if let statement here:
+                     */
+            title = selectCategory!.name
+         
+                    /*
+                     Set the colour to use here:
+                     */
+                    let theColourWeAreUsing = UIColor(hexString: colourHex)!
+         
+                    /*
+                     Then let us set the background colour of the search bar as well:
+                     */
+                    searchBar.barTintColor = theColourWeAreUsing
+         
+                    /*
+                     THen we will set the colours. Using navigationController?.navigationBar.backgroundColor is not an option here because in iOS 13, the status bar at the very top does not change colour (strangely enough). After Googling this, I found a solution where they use UINavigationBarAppearance() instead.
+                     */
+                    let navBarAppearance = UINavigationBarAppearance()
+                    let navBar = navigationController?.navigationBar
+                    let navItem = navigationController?.navigationItem
+                    navBarAppearance.configureWithOpaqueBackground()
+         
+                    /*
+                     We use Chameleon's ContrastColorOf() function to set the colour of the text based on the colour we use. If it is dark, the text is light, and vice versa.
+                     */
+                    let contrastColour = ContrastColorOf(theColourWeAreUsing, returnFlat: true)
+         
+                    navBarAppearance.titleTextAttributes = [.foregroundColor: contrastColour]
+                    navBarAppearance.largeTitleTextAttributes = [.foregroundColor: contrastColour]
+                    navBarAppearance.backgroundColor = theColourWeAreUsing
+                    navItem?.rightBarButtonItem?.tintColor = contrastColour
+                    navBar?.tintColor = contrastColour
+                    navBar?.standardAppearance = navBarAppearance
+                    navBar?.scrollEdgeAppearance = navBarAppearance
+         
+                    self.navigationController?.navigationBar.setNeedsLayout()
+                }
+    }
+    
     //MARK: - numberofrowinsection
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return  todoItems?.count ?? 1
     }
+//    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+////        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath) as! SwipeTableViewCell
+//
+//let cell = super.tableView(tableView, cellForRowAt: indexPath)
+//        cell.textLabel?.text = todoItems?[indexPath.row].done ?? "No category name is added"
+//        return cell
+//    }
     
 //MARK: - cellforRow
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
                              //deqeueReusableCell...
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoitemCell", for: indexPath)
+       let cell = super.tableView(tableView, cellForRowAt: indexPath)
       
         if    let item = todoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
@@ -62,6 +105,11 @@ class TodoListViewController: UITableViewController{
             cell.accessoryType = item.done ? .checkmark : .none
         }else {
             cell.textLabel?.text = "No items added"
+        }
+        
+        if let color = UIColor(hexString: selectCategory!.colour)?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(todoItems!.count)){
+            cell.backgroundColor = color
+            cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
         }
        
         
@@ -135,6 +183,21 @@ class TodoListViewController: UITableViewController{
     func loadItems(){
        todoItems = selectCategory?.items.sorted(byKeyPath: "title", ascending: true)
         tableView.reloadData()
+        
+    }
+    
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let item = self.todoItems?[indexPath.row]{
+            do{
+                
+                try self.realm.write{
+                    self.realm.delete(item)
+                }
+            }catch {
+                print("This contains a error at \(error)")
+            }
+        }
         
     }
     
